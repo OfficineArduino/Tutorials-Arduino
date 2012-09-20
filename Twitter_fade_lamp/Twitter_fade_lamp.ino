@@ -3,11 +3,11 @@
 #include "structRgb.h"
 #include <avr/pgmspace.h>
 
-char *queryString1 = "#Champions";
+char *queryString1 = "#news";
 char *queryString2 = "#arduino";
 
 char ssid[] = "OFFICINE ARDUINO"; //  your network SSID (name) 
-char pass[] = "T3mporary!";    // your network password (use for WPA, or use as key for WEP)
+char pass[] = "password";    // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;            // your network key Index number (needed only for WEP)
 int status = WL_IDLE_STATUS; // status of the wifi connection
 
@@ -66,7 +66,7 @@ int
 unidecode(byte),
 timedRead(void);
 void
-pippo(rgb, rgb);
+fadeTo(rgb, rgb);
 
 // ---------------------------------------------------------------------------
 
@@ -146,6 +146,7 @@ void loop() {
       lampShades[i].green = i*15;
       lampShades[i].blue = 0;
       
+      // Loaded colors
       Serial.print(i);
       Serial.print(": ");
       Serial.print(lampShades[i].red);
@@ -168,6 +169,7 @@ void loop() {
       lampShades[i].green = i*15;
       lampShades[i].blue = 255;
       
+      // Loaded colors     
       Serial.print(i);
       Serial.print(": ");
       Serial.print(lampShades[i].red);
@@ -322,7 +324,7 @@ boolean jsonParse(int depth, byte endChar) {
 	  
 	  uint8_t cc = (colorCount+1)%8;
 	  
-	  pippo(lampShades[colorCount], lampShades[cc]);
+	  fadeTo(lampShades[colorCount], lampShades[cc]);
 	  
 	  colorCount = cc;
 	  
@@ -445,10 +447,13 @@ void printWifiStatus() {
   Serial.println(F(" dBm"));
 }
 
-void pippo(rgb in, rgb out) {
+void fadeTo(rgb in, rgb out) {
   boolean stop_r, stop_g, stop_b;
   stop_r = stop_g = stop_b = false;
   
+  // use for debugging purposes, this is
+  // very noisy otherwise ... too much info
+  /* 
   Serial.print(in.red);
   Serial.print(" ");
   Serial.print(in.green);
@@ -462,52 +467,57 @@ void pippo(rgb in, rgb out) {
   Serial.print(out.green);
   Serial.print(" ");
   Serial.println(out.blue);
+  */
   
   while(!(stop_r & stop_g & stop_b)) {
-    // operate each color: RED
-   
-    if(in.red > 0 && in.red < out.red && out.red <= 255) {
-      stop_r = false;
-      in.red++;
-    }
-    if(in.red <= 255 && in.red >out.red && out.red > 0){
-      in.red--;
-      stop_r = true;
-    }
-
-    if(in.green < out.green){
-      stop_g = false;
-      in.green++;
-    }
-    if(in.green >= out.green) {
-      in.green=out.green;
-      stop_g = true;
-    }
     
-    if(in.blue < out.blue){
-      stop_b = false;
+    if(in.red < out.red) {
+      in.red++;
+      stop_r = false;
+      if(in.red > 255) { in.red = 255; stop_r = true; }
+    }
+    if(in.red > out.red) {
+      in.red--;
+      stop_r = false;
+      if(in.red < 0) { in.red = 0; stop_r = true; }
+    }
+    if(in.red == out.red) stop_r = true;
+    
+    if(in.green < out.green) {
+      in.green++;
+      stop_g = false;
+      if(in.green > 255) { in.green = 255; stop_r = true; }
+    }
+    if(in.green > out.green) {
+      in.green--;
+      stop_g = false;
+      if(in.green < 0) { in.green = 0;	stop_r = true; }
+    }
+    if(in.green == out.green) stop_g = true;
+           
+    if(in.blue < out.blue) {
       in.blue++;
+      stop_b = false;
+      if(in.blue > 255) { in.blue = 255; stop_r = true; }
     }
-    if(in.blue >= out.blue) {
-      in.blue=out.blue;
-      stop_b = true;
+    if(in.blue > out.blue) {
+      in.blue--;
+      stop_b = false;
+      if(in.blue < 0) { in.blue = 0;	stop_r = true; }
     }
-
+    if(in.blue == out.blue) stop_b = true;
        
-    Serial.print(stop_r);
-    Serial.print(stop_g);
-    Serial.println(stop_b);
-    Serial.println((stop_r | stop_g | stop_b));
+
     // use for debugging purposes, this is
     // very noisy otherwise ... too much info
-    
+    /*
     Serial.print("R: ");
     Serial.print(in.red);
     Serial.print(" - G: ");
     Serial.print(in.green);
     Serial.print(" - B: ");
     Serial.println(in.blue);
-    
+    */
 
     // push out the colors
     analogWrite(pin_r, in.red);
@@ -517,10 +527,4 @@ void pippo(rgb in, rgb out) {
     delay(100);
   }
   
-}
-
-int freeRam () {
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }

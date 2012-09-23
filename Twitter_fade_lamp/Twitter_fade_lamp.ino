@@ -1,37 +1,49 @@
+/*
+Twitter Lamp demo sketch: monitors one or more Twitter accounts
+for changes, changing the RGB led colors
+Based on the orginal code of Gutenbird by Adafruit Industries
+Modified by Federico Vanzati  (Officine Arduino)
+Released with MIT licesne.
+
+REQUIRES ARDUINO IDE 1.0 OR LATER -- Back-porting is not likely to
+occur, as the code is deeply dependent on the Stream class, etc.
+
+Required hardware includes a WiFi Shield connected to the Arduino UNO board 
+and power RGB leds.
+*/
+
 #include <SPI.h>
 #include <WiFi.h>
 #include "structRgb.h"
 #include <avr/pgmspace.h>
 
-char *queryString1 = "#news";
-char *queryString2 = "#arduino";
+// Enter your hashtag that you want to monitoring
+char *queryString1 = "#yourhashtag";  // first hashtag
+char *queryString2 = "#arduino";      // second hashtag
 
-char ssid[] = "OFFICINE ARDUINO"; //  your network SSID (name) 
+// Enter your WiFi network settings
+char ssid[] = "yourSSID";    // your network SSID (name) 
 char pass[] = "password";    // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;            // your network key Index number (needed only for WEP)
 int status = WL_IDLE_STATUS; // status of the wifi connection
 
 
-const int pin_r = 5;
-const int pin_g = 6;
-const int pin_b = 3;
+const int pin_r = 5;  // pwm pin for the red led
+const int pin_g = 6;  // pwm pin for the green led
+const int pin_b = 3;  // pwm pin for the blue led
 
-const uint8_t mode1_switch = 2;
-const uint8_t mode2_switch = 8;
+const uint8_t mode1_switch = 2;  // pin where connect the switch for mode 1
+const uint8_t mode2_switch = 8;  // pin where connect the switch for mode 2
 uint8_t prev_mode1Switch = true;
 uint8_t prev_mode2Switch = true;
 
-const int maxTweets = 5; // Limit tweets printed; avoid runaway output
+const int maxTweets = 5;  // Limit tweets printed; avoid runaway output
 
 const unsigned long // Time limits, expressed in milliseconds:
 pollingInterval = 10L * 1000L, // Note: Twitter server will allow 150/hr max
 connectTimeout  = 15L * 1000L, // Max time to retry server link
-responseTimeout = 15L * 1000L, // Max time to wait for data from server
-fadeInterval = 1000;
+responseTimeout = 15L * 1000L; // Max time to wait for data from server
 
-unsigned long prevMillisFade = 0;
-
-byte sleepPos = 0; // Current "sleep throb" table position
 byte resultsDepth; // Used in JSON parsing
 
 uint8_t colorCount = 0;
@@ -71,10 +83,10 @@ fadeTo(rgb, rgb);
 // ---------------------------------------------------------------------------
 
 void setup() {
-  pinMode(mode1_switch, INPUT_PULLUP);
-  pinMode(mode2_switch, INPUT_PULLUP);
+  pinMode(mode1_switch, INPUT_PULLUP);  // connecting the first pin directly to the input pin w/o external hardware
+  pinMode(mode2_switch, INPUT_PULLUP);  // connecting the second pin directly to the input pin w/o external hardware
   
-  
+  // Little test just to check if the the leds are working and saying hello
   analogWrite(pin_r, 255);
   analogWrite(pin_g, 0);
   analogWrite(pin_b, 0);
@@ -94,6 +106,7 @@ void setup() {
   analogWrite(pin_g, 0);
   analogWrite(pin_b, 0);
 
+  // Initialize the serial communication, used only for debuggging
   Serial.begin(9600);
   
   // check for the presence of the shield:
@@ -111,7 +124,7 @@ void setup() {
     status = WiFi.begin(ssid, pass); 
 
     // wait 10 seconds for connection:
-    delay(5000);
+    delay(10000);
   } 
   // you're connected now, so print out the status:
   printWifiStatus();
@@ -134,11 +147,12 @@ void loop() {
 
   startTime = millis();
    
+  // check the switch state
   uint8_t mode1_switchStatus = digitalRead(mode1_switch);
   uint8_t mode2_switchStatus = digitalRead(mode2_switch);
   
+  // if just switched to mode 1, change the color sequence
   if(mode1_switchStatus == false && prev_mode1Switch == true) {
-    Serial.println("ARDUINO");
     colorCount = 0;
     strcpy(queryString, queryString1);
     for(uint8_t i=0; i<8; i++) {
@@ -153,15 +167,15 @@ void loop() {
       Serial.print(" ");
       Serial.print(lampShades[i].green);
       Serial.print(" ");
-      Serial.println(lampShades[i].blue);
-     
+      Serial.println(lampShades[i].blue);    
     }
       analogWrite(pin_r, lampShades[0].red);
       analogWrite(pin_g, lampShades[0].green);
       analogWrite(pin_b, lampShades[0].blue);
   }
+  
+  // if just switched to mode 2, change the color sequence
   else if(mode2_switchStatus == false && prev_mode2Switch == true) {
-    Serial.println("CIAO");
     colorCount = 0;
     strcpy(queryString, queryString2);
     for(uint8_t i=0; i<8; i++) {
@@ -177,7 +191,6 @@ void loop() {
       Serial.print(lampShades[i].green);
       Serial.print(" ");
       Serial.println(lampShades[i].blue);
-
     }
           
       analogWrite(pin_r, lampShades[0].red);
@@ -187,12 +200,15 @@ void loop() {
   prev_mode1Switch = mode1_switchStatus;
   prev_mode2Switch = mode2_switchStatus;
   
+  // Use for debugging the the switch state
+  /*
   Serial.print(prev_mode1Switch);
   Serial.print(" ");
   Serial.println(prev_mode2Switch);
   
   Serial.println(queryString);
   Serial.println();
+  */
   
   // Attempt server connection, with timeout...
   Serial.print(F("Connecting to server..."));
@@ -250,7 +266,6 @@ void loop() {
     Serial.println(F("failed"));
   }
   
-
   // Sometimes network access & printing occurrs so quickly, the steady-on
   // LED wouldn't even be apparent, instead resembling a discontinuity in
   // the otherwise smooth sleep throb. Keep it on at least 4 seconds.
@@ -315,13 +330,8 @@ boolean jsonParse(int depth, byte endChar) {
         } 
         else if(!strcasecmp(name, "from_user")) {
           strncpy(fromUser, value, sizeof(fromUser)-1);
-/*
-	  colorCount++;
-	  if(colorCount == maxColorCount)
-	    colorCount = 0;
-	  */
-	  Serial.println(colorCount);
 	  
+	  // every time a new user post a tweet lest's fade up the LED
 	  uint8_t cc = (colorCount+1)%8;
 	  
 	  fadeTo(lampShades[colorCount], lampShades[cc]);

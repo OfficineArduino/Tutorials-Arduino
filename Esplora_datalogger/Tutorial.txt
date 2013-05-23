@@ -21,5 +21,5 @@ Once you're done you can plug the micro SD in your computer and it will contain 
 
 "Graph" mode displays on the LCD the stored data in the SD card. It will auto-fit all the stored data in the lcd, but keep in mind that if the data exceed 162 points the sketch will show an approximate graphic. You have to press button 1 to return to main menu.
 
-The default sensor is the light sensor, but you can change the input sensor by replacing in read() function "Esplora.readLightSensor()" with the right sensor function e.g. "Esplora.readTemperature()"
+The default sensor is the light sensor, but you can change the input sensor by replacing in read() function "Esplora.readLightSensor()" with the right sensor function e.g. "Esplora.readTemperature()" 
 
